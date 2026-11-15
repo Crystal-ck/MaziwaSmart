@@ -1,3 +1,4 @@
+
 package com.maziwasmart.app.ui.navigation
 
 import androidx.compose.foundation.layout.WindowInsets
@@ -46,11 +47,8 @@ import com.maziwasmart.app.ui.records.FeedingScreen
 import com.maziwasmart.app.ui.records.MilkScreen
 import com.maziwasmart.app.ui.reports.ReportsScreen
 import com.maziwasmart.app.ui.settings.SettingsScreen
-import com.maziwasmart.app.ui.theme.Brown
-import com.maziwasmart.app.ui.theme.Green
-import com.maziwasmart.app.ui.theme.Muted
+import com.maziwasmart.app.ui.theme.*
 
-/** All the screens in the app */
 object Routes {
     const val LOGIN = "login"
     const val REGISTER = "register"
@@ -74,7 +72,11 @@ object Routes {
     fun prediction(cowId: String = "") = "prediction?cowId=$cowId"
 }
 
-private data class Tab(val label: String, val route: String, val icon: ImageVector)
+private data class Tab(
+    val label: String,
+    val route: String,
+    val icon: ImageVector
+)
 
 private val tabs = listOf(
     Tab("Home", Routes.DASHBOARD, Icons.Filled.Home),
@@ -87,77 +89,206 @@ private val tabs = listOf(
 @Composable
 fun MaziwaApp() {
     val nav = rememberNavController()
+
     val authVm: AuthViewModel = viewModel()
     val farmVm: FarmViewModel = viewModel()
 
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
-    val showBottomBar = tabs.any { it.route == currentRoute }
-    // decided once when the app opens: logged in already -> Dashboard, otherwise -> Login
-    val start = remember { if (authVm.isLoggedIn()) Routes.DASHBOARD else Routes.LOGIN }
+
+    val showBottomBar = tabs.any {
+        it.route == currentRoute
+    }
+
+    val start = remember {
+        if (authVm.isLoggedIn()) {
+            Routes.DASHBOARD
+        } else {
+            Routes.LOGIN
+        }
+    }
 
     Scaffold(
         containerColor = Color.White,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        bottomBar = { if (showBottomBar) BottomBar(nav, currentRoute) }
+        bottomBar = {
+            if (showBottomBar) {
+                BottomBar(nav, currentRoute)
+            }
+        }
     ) { innerPadding ->
+
         NavHost(
             navController = nav,
             startDestination = start,
-            modifier = Modifier.padding(innerPadding).then(if (showBottomBar) Modifier else Modifier.navigationBarsPadding())
+            modifier = Modifier
+                .padding(innerPadding)
+                .then(
+                    if (showBottomBar) Modifier
+                    else Modifier.navigationBarsPadding()
+                )
         ) {
-            val back: () -> Unit = { nav.popBackStack() }
-            val go: (String) -> Unit = { route -> nav.navigate(route) }
+            val back: () -> Unit = {
+                nav.popBackStack()
+            }
+
+            val go: (String) -> Unit = { route ->
+                nav.navigate(route)
+            }
 
             composable(Routes.LOGIN) {
                 LoginScreen(
                     vm = authVm,
                     onLoggedIn = {
                         farmVm.refreshUser()
-                        nav.navigate(Routes.DASHBOARD) { popUpTo(Routes.LOGIN) { inclusive = true } }
+
+                        nav.navigate(Routes.DASHBOARD) {
+                            popUpTo(Routes.LOGIN) {
+                                inclusive = true
+                            }
+                        }
                     },
-                    onRegister = { go(Routes.REGISTER) }
+                    onRegister = {
+                        go(Routes.REGISTER)
+                    }
                 )
             }
+
             composable(Routes.REGISTER) {
                 RegisterScreen(
                     vm = authVm,
                     onBack = back,
                     onRegistered = {
                         farmVm.refreshUser()
-                        nav.navigate(Routes.DASHBOARD) { popUpTo(Routes.LOGIN) { inclusive = true } }
+
+                        nav.navigate(Routes.DASHBOARD) {
+                            popUpTo(Routes.LOGIN) {
+                                inclusive = true
+                            }
+                        }
                     }
                 )
             }
-            composable(Routes.DASHBOARD) { DashboardScreen(farmVm, onNavigate = go) }
-            composable(Routes.COWS) { CowsScreen(farmVm, onNavigate = go) }
-            composable(Routes.ADD_COW) { AddCowScreen(farmVm, onBack = back) }
-            composable(Routes.COW_PROFILE, arguments = listOf(navArgument("cowId") { type = NavType.StringType })) { entry ->
-                CowProfileScreen(farmVm, cowId = entry.arguments?.getString("cowId") ?: "", onBack = back, onNavigate = go)
-            }
-            composable(Routes.FEEDING, arguments = listOf(optionalCowId())) { entry ->
-                FeedingScreen(farmVm, startCowId = entry.arguments?.getString("cowId") ?: "", onBack = back,
-                    onSaved = { cowId -> nav.navigate(Routes.milk(cowId)) })
-            }
-            composable(Routes.MILK, arguments = listOf(optionalCowId())) { entry ->
-                MilkScreen(farmVm, startCowId = entry.arguments?.getString("cowId") ?: "", onBack = back,
-                    onSaved = { cowId -> nav.navigate(Routes.prediction(cowId)) })
+
+            composable(Routes.DASHBOARD) {
+                DashboardScreen(
+                    farmVm,
+                    onNavigate = go
+                )
             }
 
-            // ---- AI section (dummy data for now) ----
-            composable(Routes.AI_MENU) { AiMenuScreen(onNavigate = go) }
-            composable(Routes.PREDICTION, arguments = listOf(optionalCowId())) { entry ->
-                PredictionScreen(farmVm, startCowId = entry.arguments?.getString("cowId") ?: "", onBack = back, onNavigate = go)
+            composable(Routes.COWS) {
+                CowsScreen(
+                    farmVm,
+                    onNavigate = go
+                )
             }
-            composable(Routes.INSIGHTS) { InsightsScreen(onBack = back, onNavigate = go) }
-            composable(Routes.RECOMMENDATIONS) { RecommendationsScreen(onNavigate = go) }
 
-            composable(Routes.FINANCE) { FinanceScreen(farmVm, onBack = back) }
-            composable(Routes.REPORTS) { ReportsScreen(farmVm, onNavigate = go) }
+            composable(Routes.ADD_COW) {
+                AddCowScreen(
+                    farmVm,
+                    onBack = back
+                )
+            }
+
+            composable(
+                Routes.COW_PROFILE,
+                arguments = listOf(
+                    navArgument("cowId") {
+                        type = NavType.StringType
+                    }
+                )
+            ) { entry ->
+                CowProfileScreen(
+                    farmVm,
+                    cowId = entry.arguments?.getString("cowId") ?: "",
+                    onBack = back,
+                    onNavigate = go
+                )
+            }
+
+            composable(
+                Routes.FEEDING,
+                arguments = listOf(optionalCowId())
+            ) { entry ->
+                FeedingScreen(
+                    farmVm,
+                    startCowId = entry.arguments?.getString("cowId") ?: "",
+                    onBack = back,
+                    onSaved = { cowId ->
+                        nav.navigate(Routes.milk(cowId))
+                    }
+                )
+            }
+
+            composable(
+                Routes.MILK,
+                arguments = listOf(optionalCowId())
+            ) { entry ->
+                MilkScreen(
+                    farmVm,
+                    startCowId = entry.arguments?.getString("cowId") ?: "",
+                    onBack = back,
+                    onSaved = { cowId ->
+                        nav.navigate(Routes.prediction(cowId))
+                    }
+                )
+            }
+
+            // AI section
+            composable(Routes.AI_MENU) {
+                AiMenuScreen(onNavigate = go)
+            }
+
+            composable(
+                Routes.PREDICTION,
+                arguments = listOf(optionalCowId())
+            ) { entry ->
+                PredictionScreen(
+                    farmVm,
+                    startCowId = entry.arguments?.getString("cowId") ?: "",
+                    onBack = back,
+                    onNavigate = go
+                )
+            }
+
+            composable(Routes.INSIGHTS) {
+                InsightsScreen(
+                    onBack = back,
+                    onNavigate = go
+                )
+            }
+
+            composable(Routes.RECOMMENDATIONS) {
+                RecommendationsScreen(onNavigate = go)
+            }
+
+            composable(Routes.FINANCE) {
+                FinanceScreen(
+                    farmVm,
+                    onBack = back
+                )
+            }
+
+            composable(Routes.REPORTS) {
+                ReportsScreen(
+                    farmVm,
+                    onNavigate = go
+                )
+            }
+
             composable(Routes.SETTINGS) {
-                SettingsScreen(farmVm, onBack = back, onLoggedOut = {
-                    nav.navigate(Routes.LOGIN) { popUpTo(Routes.DASHBOARD) { inclusive = true } }
-                })
+                SettingsScreen(
+                    farmVm,
+                    onBack = back,
+                    onLoggedOut = {
+                        nav.navigate(Routes.LOGIN) {
+                            popUpTo(Routes.DASHBOARD) {
+                                inclusive = true
+                            }
+                        }
+                    }
+                )
             }
         }
     }
@@ -169,20 +300,32 @@ private fun optionalCowId() = navArgument("cowId") {
 }
 
 @Composable
-private fun BottomBar(nav: NavHostController, currentRoute: String?) {
+private fun BottomBar(
+    nav: NavHostController,
+    currentRoute: String?
+) {
     NavigationBar(containerColor = Color.White) {
         tabs.forEach { tab ->
             NavigationBarItem(
                 selected = currentRoute == tab.route,
                 onClick = {
                     nav.navigate(tab.route) {
-                        popUpTo(Routes.DASHBOARD) { saveState = true }
+                        popUpTo(Routes.DASHBOARD) {
+                            saveState = true
+                        }
                         launchSingleTop = true
                         restoreState = true
                     }
                 },
-                icon = { Icon(tab.icon, contentDescription = tab.label) },
-                label = { Text(tab.label) },
+                icon = {
+                    Icon(
+                        tab.icon,
+                        contentDescription = tab.label
+                    )
+                },
+                label = {
+                    Text(tab.label)
+                },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = Color.White,
                     selectedTextColor = Brown,
