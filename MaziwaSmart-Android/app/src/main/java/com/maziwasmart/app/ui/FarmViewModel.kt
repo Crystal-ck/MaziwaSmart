@@ -130,11 +130,14 @@ class FarmViewModel : ViewModel() {
     }
 
     private fun now() = System.currentTimeMillis()
-
     fun addCow(cow: Cow, onDone: (String?) -> Unit) =
         save(onDone) {
-            repo.add(it, "cows", cow.copy(createdAt = now()))
+            repo.addCow(
+                it,
+                cow.copy(createdAt = now())
+            )
         }
+
 
     fun deleteCow(id: String, onDone: (String?) -> Unit) =
         save(onDone) {

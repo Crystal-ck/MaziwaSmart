@@ -114,6 +114,20 @@ class FarmRepository(
         collection(uid, collectionName).add(item).await()
     }
 
+    suspend fun addCow(uid: String, cow: Cow) {
+        val cowDocument = collection(uid, "cows").document()
+
+        val generatedId = "COW-${cowDocument.id.uppercase()}"
+
+        val newCow = cow.copy(
+            id = "",
+            tagId = generatedId
+        )
+
+        cowDocument.set(newCow).await()
+    }
+
+
     suspend fun delete(
         uid: String,
         collectionName: String,
