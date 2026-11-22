@@ -31,6 +31,9 @@ import androidx.compose.ui.unit.sp
 import com.maziwasmart.app.ai.DummyAi
 import com.maziwasmart.app.ai.Prediction
 import com.maziwasmart.app.ai.RidgeMilkYieldPredictor
+import com.maziwasmart.app.ai.RidgeModelCalculator
+import com.maziwasmart.app.ai.FarmAnalysis
+import com.maziwasmart.app.ai.AdviceTarget
 import com.maziwasmart.app.data.Cow
 import com.maziwasmart.app.data.Dates
 import com.maziwasmart.app.data.oneDecimal
@@ -482,9 +485,23 @@ private fun Legend(label: String, color: Color) {
 
 @Composable
 fun InsightsScreen(
+    vm: FarmViewModel,
     onBack: () -> Unit,
     onNavigate: (String) -> Unit
 ) {
+
+    val feedings by vm.feedings.collectAsState()
+    val milk by vm.milk.collectAsState()
+
+    val days = remember { Dates.lastNDays(30) }
+
+    val points = remember(feedings, milk) {
+        FarmAnalysis.dmiVsMilk(feedings, milk, days)
+    }
+
+    val supplementComparison = remember(feedings, milk) {
+        FarmAnalysis.supplementComparison(feedings, milk, days)
+    }
 
     ScreenWithHeader(
         title = "Feeding Insights",
@@ -494,17 +511,24 @@ fun InsightsScreen(
         AppCard {
             SectionTitle("Dry matter intake vs milk yield")
 
-            ScatterChart(
-                DummyAi.dmiVsMilk,
-                highlight = setOf(11, 12)
-            )
+            if (points.size < 2) {
+                EmptyText("Record feeding and milk on the same days to see this chart.")
+            } else {
+                ScatterChart(points)
 
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Lower DMI (kg)", fontSize = 10.sp, color = Muted)
-                Text("Higher DMI (kg)", fontSize = 10.sp, color = Muted)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Lower DMI (kg)", fontSize = 10.sp, color = Muted)
+                    Text("Higher DMI (kg)", fontSize = 10.sp, color = Muted)
+                }
+
+                Text(
+                    "${points.size} cow-days in the last 30 days",
+                    fontSize = 10.sp,
+                    color = Muted
+                )
             }
         }
 
@@ -550,35 +574,38 @@ fun InsightsScreen(
 
             SectionTitle("Supplement days")
 
-            val max = DummyAi.supplementComparison.maxOf {
-                it.second
-            }
+            if (supplementComparison.isEmpty()) {
+                EmptyText("No feeding days with milk records yet.")
+            } else {
 
-            DummyAi.supplementComparison.forEachIndexed { i, item ->
+                val max = supplementComparison.maxOf { it.second }.coerceAtLeast(0.1)
 
-                val (label, litres) = item
+                supplementComparison.forEachIndexed { i, item ->
 
-                Row(Modifier.fillMaxWidth()) {
+                    val (label, litres) = item
 
-                    Text(
-                        label,
-                        fontSize = 12.sp,
-                        color = Brown,
-                        modifier = Modifier.weight(1f)
-                    )
+                    Row(Modifier.fillMaxWidth()) {
 
-                    Text(
-                        "${litres.oneDecimal()} L avg",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Brown
+                        Text(
+                            label,
+                            fontSize = 12.sp,
+                            color = Brown,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Text(
+                            "${litres.oneDecimal()} L avg",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Brown
+                        )
+                    }
+
+                    ProgressBar(
+                        (litres / max * 0.9).toFloat(),
+                        if (i == 0) Green else Orange
                     )
                 }
-
-                ProgressBar(
-                    (litres / max * 0.9).toFloat(),
-                    if (i == 0) Green else Orange
-                )
             }
         }
 
@@ -621,23 +648,34 @@ fun InsightsScreen(
 /* ---------------- RECOMMENDATIONS ---------------- */
 
 @Composable
-fun RecommendationsScreen(onNavigate: (String) -> Unit) {
+fun RecommendationsScreen(
+    vm: FarmViewModel,
+    onNavigate: (String) -> Unit
+) {
 
-    val reviewed = remember {
-        mutableStateListOf<Int>()
+    val cows by vm.cows.collectAsState()
+    val feedings by vm.feedings.collectAsState()
+    val milk by vm.milk.collectAsState()
+    val reviewedIds by vm.reviewedAdvice.collectAsState()
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    val calculator = remember(context) {
+        runCatching { RidgeModelCalculator(context) }.getOrNull()
+    }
+
+    val advice = remember(cows, feedings, milk, calculator) {
+        FarmAnalysis.recommendations(cows, feedings, milk, calculator)
     }
 
     var tab by rememberSaveable {
         mutableStateOf("New")
     }
 
-    val newItems = DummyAi.recommendations.filter {
-        it.id !in reviewed
-    }
+    val reviewedSet = reviewedIds.toSet()
 
-    val doneItems = DummyAi.recommendations.filter {
-        it.id in reviewed
-    }
+    val newItems = advice.filter { it.id !in reviewedSet }
+    val doneItems = advice.filter { it.id in reviewedSet }
 
     val shown = if (tab == "New") newItems else doneItems
 
@@ -645,8 +683,6 @@ fun RecommendationsScreen(onNavigate: (String) -> Unit) {
         title = "Recommendations",
         subtitle = "Advice from your farm records"
     ) {
-
-        DemoBanner()
 
         Segmented(
             listOf("New", "Reviewed"),
@@ -661,9 +697,11 @@ fun RecommendationsScreen(onNavigate: (String) -> Unit) {
             color = Muted
         )
 
-        if (shown.isEmpty()) {
+        if (cows.isEmpty()) {
+            EmptyText("Add cows and records to get advice.")
+        } else if (shown.isEmpty()) {
             EmptyText(
-                if (tab == "New") "All caught up!"
+                if (tab == "New") "All caught up! Your records look good."
                 else "Nothing reviewed yet"
             )
         }
@@ -718,6 +756,12 @@ fun RecommendationsScreen(onNavigate: (String) -> Unit) {
                         .padding(8.dp)
                 )
 
+                val openRoute = when (rec.target) {
+                    AdviceTarget.FEEDING -> Routes.feeding(rec.cowId)
+                    AdviceTarget.MILK -> Routes.milk(rec.cowId)
+                    AdviceTarget.COW -> Routes.cowProfile(rec.cowId)
+                }
+
                 if (tab == "New") {
 
                     Row(
@@ -725,14 +769,18 @@ fun RecommendationsScreen(onNavigate: (String) -> Unit) {
                     ) {
 
                         AppOutlineButton(
-                            "Open records",
-                            { onNavigate(Routes.feeding()) },
+                            if (rec.target == AdviceTarget.COW) "Open cow" else "Open records",
+                            { onNavigate(openRoute) },
                             Modifier.weight(1f)
                         )
 
                         AppButton(
                             "Reviewed",
-                            { reviewed.add(rec.id) },
+                            {
+                                vm.markAdviceReviewed(rec.id) { error ->
+                                    if (error != null) context.toast(error)
+                                }
+                            },
                             Modifier.weight(1f),
                             background = Green,
                             textColor = Color.White,
@@ -754,7 +802,20 @@ fun RecommendationsScreen(onNavigate: (String) -> Unit) {
                         Text(
                             " Reviewed",
                             fontSize = 12.sp,
-                            color = GreenDeep
+                            color = GreenDeep,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Text(
+                            "Undo",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = OrangeText,
+                            modifier = Modifier.clickable {
+                                vm.undoAdviceReviewed(rec.id) { error ->
+                                    if (error != null) context.toast(error)
+                                }
+                            }
                         )
                     }
                 }

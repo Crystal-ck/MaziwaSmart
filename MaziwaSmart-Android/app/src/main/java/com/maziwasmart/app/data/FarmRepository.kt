@@ -106,6 +106,35 @@ class FarmRepository(
             item.copy(id = id)
         }
 
+    /**
+     * Ids of the advice cards the farmer marked as "Reviewed".
+     * Stored as users/{uid}/reviewedAdvice/{adviceId} = { reviewedAt }
+     */
+    fun reviewedAdvice(uid: String): Flow<List<String>> = callbackFlow {
+
+        val registration = collection(uid, "reviewedAdvice")
+            .addSnapshotListener { snapshot, error ->
+
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                trySend(snapshot?.documents?.map { it.id } ?: emptyList())
+            }
+
+        awaitClose {
+            registration.remove()
+        }
+    }
+
+    suspend fun markAdviceReviewed(uid: String, adviceId: String) {
+        collection(uid, "reviewedAdvice")
+            .document(adviceId)
+            .set(mapOf("reviewedAt" to System.currentTimeMillis()))
+            .await()
+    }
+
     suspend fun add(
         uid: String,
         collectionName: String,
