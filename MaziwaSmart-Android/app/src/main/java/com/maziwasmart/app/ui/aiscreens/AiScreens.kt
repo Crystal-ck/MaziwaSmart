@@ -550,35 +550,39 @@ fun InsightsScreen(
 
             SectionTitle("Supplement days")
 
-            val max = DummyAi.supplementComparison.maxOf {
-                it.second
-            }
+            if (DummyAi.supplementComparison.isEmpty()) {
+                EmptyText("No supplement comparison data available yet")
+            } else {
+                val max = DummyAi.supplementComparison.maxOfOrNull {
+                    it.second
+                } ?: 1.0
 
-            DummyAi.supplementComparison.forEachIndexed { i, item ->
+                DummyAi.supplementComparison.forEachIndexed { i, item ->
 
-                val (label, litres) = item
+                    val (label, litres) = item
 
-                Row(Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth()) {
 
-                    Text(
-                        label,
-                        fontSize = 12.sp,
-                        color = Brown,
-                        modifier = Modifier.weight(1f)
-                    )
+                        Text(
+                            label,
+                            fontSize = 12.sp,
+                            color = Brown,
+                            modifier = Modifier.weight(1f)
+                        )
 
-                    Text(
-                        "${litres.oneDecimal()} L avg",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Brown
+                        Text(
+                            "${litres.oneDecimal()} L avg",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Brown
+                        )
+                    }
+
+                    ProgressBar(
+                        if (max > 0) (litres / max * 0.9).toFloat() else 0f,
+                        if (i == 0) Green else Orange
                     )
                 }
-
-                ProgressBar(
-                    (litres / max * 0.9).toFloat(),
-                    if (i == 0) Green else Orange
-                )
             }
         }
 
