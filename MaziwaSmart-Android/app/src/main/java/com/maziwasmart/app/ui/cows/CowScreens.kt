@@ -37,7 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-import com.maziwasmart.app.ai.DummyAi
+import com.maziwasmart.app.ai.RidgeMilkYieldPredictor
 import com.maziwasmart.app.data.Breeds
 import com.maziwasmart.app.data.Cow
 import com.maziwasmart.app.data.Dates
@@ -56,13 +56,20 @@ private val avatarColors = listOf(
     GreenSoft to GreenDeep
 )
 
+private val geneticGroups = listOf(
+    "Local",
+    "HF50",
+    "HF62.5",
+    "HF75",
+    "HF87.5"
+)
+
 // ---------------------------------------------------------------------------
 // Cow Avatar
 // ---------------------------------------------------------------------------
 
 @Composable
 fun CowAvatar(cow: Cow, index: Int, size: Int = 52) {
-
     val (bg, fg) = avatarColors[index % avatarColors.size]
 
     Box(
@@ -90,17 +97,11 @@ fun CowsScreen(
     vm: FarmViewModel,
     onNavigate: (String) -> Unit
 ) {
-
     val cows by vm.cows.collectAsState()
     val milk by vm.milk.collectAsState()
 
-    var search by rememberSaveable {
-        mutableStateOf("")
-    }
-
-    var breedFilter by rememberSaveable {
-        mutableStateOf("All")
-    }
+    var search by rememberSaveable { mutableStateOf("") }
+    var breedFilter by rememberSaveable { mutableStateOf("All") }
 
     val today = Dates.today()
 
@@ -112,7 +113,6 @@ fun CowsScreen(
     val shown = cows
         .sortedBy { it.tagId }
         .filter { cow ->
-
             (breedFilter == "All" || cow.breed == breedFilter) &&
                     (
                             search.isBlank() ||
@@ -125,15 +125,11 @@ fun CowsScreen(
         title = "My Cows",
         subtitle = "${cows.size} registered",
         actions = {
-            HeaderIconButton(
-                Icons.Filled.Add,
-                "Add cow"
-            ) {
+            HeaderIconButton(Icons.Filled.Add, "Add cow") {
                 onNavigate(Routes.ADD_COW)
             }
         }
     ) {
-
         AppTextField(
             search,
             { search = it },
@@ -141,10 +137,7 @@ fun CowsScreen(
             leadingIcon = Icons.Filled.Search
         )
 
-        ChipRow(
-            breeds,
-            breedFilter
-        ) {
+        ChipRow(breeds, breedFilter) {
             breedFilter = it
         }
 
@@ -158,38 +151,25 @@ fun CowsScreen(
         }
 
         shown.forEachIndexed { index, cow ->
-
             val litres = milk
-                .filter {
-                    it.cowId == cow.id && it.date == today
-                }
+                .filter { it.cowId == cow.id && it.date == today }
                 .sumOf { it.litres }
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(18.dp))
-                    .border(
-                        1.dp,
-                        LineColor,
-                        RoundedCornerShape(18.dp)
-                    )
+                    .border(1.dp, LineColor, RoundedCornerShape(18.dp))
                     .clickable {
                         onNavigate(Routes.cowProfile(cow.id))
                     }
                     .padding(12.dp),
-
                 verticalAlignment = Alignment.CenterVertically,
-
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-
                 CowAvatar(cow, index)
 
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "${cow.name}  ·  ${cow.tagId}",
                         fontSize = 13.sp,
@@ -201,31 +181,19 @@ fun CowsScreen(
                         text = "${cow.breed} · ${cow.lactationStatus}",
                         fontSize = 11.sp,
                         color = if (cow.lactationStatus == "Lactating")
-                            GreenDeep
-                        else
-                            Muted
+                            GreenDeep else Muted
                     )
                 }
 
-                Column(
-                    horizontalAlignment = Alignment.End
-                ) {
-
+                Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = if (litres > 0)
-                            "${litres.clean()} L"
-                        else
-                            "—",
+                        text = if (litres > 0) "${litres.clean()} L" else "—",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Brown
                     )
 
-                    Text(
-                        text = "today",
-                        fontSize = 11.sp,
-                        color = Muted
-                    )
+                    Text("today", fontSize = 11.sp, color = Muted)
                 }
             }
         }
@@ -241,48 +209,23 @@ fun AddCowScreen(
     vm: FarmViewModel,
     onBack: () -> Unit
 ) {
-
     val cows by vm.cows.collectAsState()
     val context = LocalContext.current
 
-    var name by rememberSaveable {
-        mutableStateOf("")
-    }
-
-    var tagId by rememberSaveable {
-        mutableStateOf("")
-    }
-
-    var breed by rememberSaveable {
-        mutableStateOf(Breeds.all.first())
-    }
-
-    var dateOfBirth by rememberSaveable {
-        mutableStateOf("")
-    }
-
-    var status by rememberSaveable {
-        mutableStateOf("Lactating")
-    }
-
-    var notes by rememberSaveable {
-        mutableStateOf("")
-    }
-
-    var saving by remember {
-        mutableStateOf(false)
-    }
+    var name by rememberSaveable { mutableStateOf("") }
+    var tagId by rememberSaveable { mutableStateOf("") }
+    var breed by rememberSaveable { mutableStateOf(Breeds.all.first()) }
+    var geneticGroup by rememberSaveable { mutableStateOf("") }
+    var dateOfBirth by rememberSaveable { mutableStateOf("") }
+    var status by rememberSaveable { mutableStateOf("Lactating") }
+    var notes by rememberSaveable { mutableStateOf("") }
+    var saving by remember { mutableStateOf(false) }
 
     ScreenWithHeader(
         title = "Add Cow",
         onBack = onBack
     ) {
-
-        AppTextField(
-            name,
-            { name = it },
-            "Cow name"
-        )
+        AppTextField(name, { name = it }, "Cow name")
 
         AppTextField(
             tagId,
@@ -295,6 +238,19 @@ fun AddCowScreen(
             Breeds.all,
             breed,
             { breed = Breeds.all[it] }
+        )
+
+        DropdownField(
+            "Genetic Group",
+            geneticGroups,
+            geneticGroup,
+            { geneticGroup = geneticGroups[it] }
+        )
+
+        Text(
+            "Select the cow's Holstein-Friesian genetic percentage.",
+            fontSize = 11.sp,
+            color = Muted
         )
 
         AppTextField(
@@ -319,10 +275,7 @@ fun AddCowScreen(
             singleLine = false
         )
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             AppOutlineButton(
                 "Cancel",
                 onBack,
@@ -335,9 +288,7 @@ fun AddCowScreen(
                 loading = saving,
                 modifier = Modifier.weight(1f),
                 onClick = {
-
                     when {
-
                         name.isBlank() -> {
                             context.toast("Enter the cow's name")
                         }
@@ -346,17 +297,17 @@ fun AddCowScreen(
                             context.toast("Enter the cow's identification ID")
                         }
 
+                        geneticGroup.isBlank() -> {
+                            context.toast("Select the cow's genetic group")
+                        }
+
                         cows.any {
-                            it.tagId.equals(
-                                tagId.trim(),
-                                ignoreCase = true
-                            )
+                            it.tagId.equals(tagId.trim(), ignoreCase = true)
                         } -> {
                             context.toast("Cow ID $tagId is already used")
                         }
 
                         else -> {
-
                             saving = true
 
                             vm.addCow(
@@ -364,21 +315,18 @@ fun AddCowScreen(
                                     name = name.trim(),
                                     tagId = tagId.trim(),
                                     breed = breed,
+                                    geneticGroup = geneticGroup,
                                     dateOfBirth = dateOfBirth.trim(),
                                     lactationStatus = status,
                                     notes = notes.trim()
                                 )
                             ) { error ->
-
                                 saving = false
 
                                 if (error == null) {
-
                                     context.toast("$name saved")
                                     onBack()
-
                                 } else {
-
                                     context.toast(error)
                                 }
                             }
@@ -401,79 +349,63 @@ fun CowProfileScreen(
     onBack: () -> Unit,
     onNavigate: (String) -> Unit
 ) {
-
     val cows by vm.cows.collectAsState()
     val milk by vm.milk.collectAsState()
     val feedings by vm.feedings.collectAsState()
 
     val context = LocalContext.current
 
-    var confirmDelete by remember {
-        mutableStateOf(false)
+    val predictor = remember(context) {
+        RidgeMilkYieldPredictor(context)
     }
 
-    val cow = cows.find {
-        it.id == cowId
-    }
+    var confirmDelete by remember { mutableStateOf(false) }
+
+    val cow = cows.find { it.id == cowId }
 
     if (cow == null) {
-
-        ScreenWithHeader(
-            title = "Cow",
-            onBack = onBack
-        ) {
+        ScreenWithHeader(title = "Cow", onBack = onBack) {
             EmptyText("Loading…")
         }
-
         return
     }
 
-    val index = cows
-        .sortedBy { it.tagId }
-        .indexOf(cow)
-
+    val index = cows.sortedBy { it.tagId }.indexOf(cow)
     val today = Dates.today()
     val week = Dates.lastNDays(7)
 
-    val cowMilk = milk.filter {
-        it.cowId == cow.id
-    }
-
-    val cowFeedings = feedings.filter {
-        it.cowId == cow.id
-    }
+    val cowMilk = milk.filter { it.cowId == cow.id }
+    val cowFeedings = feedings.filter { it.cowId == cow.id }
 
     val todayLitres = cowMilk
         .filter { it.date == today }
         .sumOf { it.litres }
 
     val daily = week.map { day ->
-
         cowMilk
             .filter { it.date == day }
             .sumOf { it.litres }
     }
 
-    val recordedDays = daily.filter {
-        it > 0
-    }
+    val recordedDays = daily.filter { it > 0 }
 
     val weekAverage = if (recordedDays.isEmpty())
-        0.0
-    else
-        recordedDays.average()
+        0.0 else recordedDays.average()
 
     val todayDmi = cowFeedings
         .filter { it.date == today }
         .sumOf { it.dmiKg }
 
-    val prediction = DummyAi.predictor.predict(
-        cow,
-        feedings,
-        milk
-    )
+    val predictionResult = remember(cow, feedings, milk, predictor) {
+        runCatching {
+            predictor.predict(cow, feedings, milk)
+        }
+    }
 
-    // Recent milk and feeding activities
+    val prediction = predictionResult.getOrNull()
+
+    val predictionError = predictionResult.exceptionOrNull()?.message
+        ?: "Prediction is currently unavailable."
 
     val recent = (
             cowMilk.map {
@@ -483,7 +415,6 @@ fun CowProfileScreen(
                     Dates.pretty(it.date)
                 )
             } +
-
                     cowFeedings.map {
                         Triple(
                             it.createdAt,
@@ -499,46 +430,23 @@ fun CowProfileScreen(
         title = cow.name,
         subtitle = "${cow.tagId} · ${cow.breed}",
         onBack = onBack,
-
         actions = {
-            HeaderIconButton(
-                Icons.Filled.Delete,
-                "Delete cow"
-            ) {
+            HeaderIconButton(Icons.Filled.Delete, "Delete cow") {
                 confirmDelete = true
             }
         },
-
         headerExtra = {
-
             Row(
                 modifier = Modifier.padding(top = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-
-                CowAvatar(
-                    cow,
-                    index,
-                    size = 44
-                )
-
-                Pill(
-                    cow.lactationStatus,
-                    Yellow,
-                    Brown
-                )
+                CowAvatar(cow, index, size = 44)
+                Pill(cow.lactationStatus, Yellow, Brown)
             }
         }
-
     ) {
-
-        // Milk production statistics
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MiniStat(
                 "${todayLitres.clean()} L",
                 "Today",
@@ -554,33 +462,22 @@ fun CowProfileScreen(
             )
 
             MiniStat(
-                "${prediction.predictedLitres} L",
+                prediction?.predictedLitres?.oneDecimal()?.let { "$it L" } ?: "—",
                 "Predicted*",
                 OrangeSoft,
                 Modifier.weight(1f)
             )
         }
 
-        // Milk production chart
-
         AppCard {
-
             SectionTitle("Milk, last 7 days (L)")
-
             BarChart(
                 daily,
-                week.map {
-                    Dates.pretty(it).substringBefore(" ")
-                }
+                week.map { Dates.pretty(it).substringBefore(" ") }
             )
         }
 
-        // Dry matter intake
-
-        AppCard(
-            background = GreenSoft
-        ) {
-
+        AppCard(background = GreenSoft) {
             Text(
                 "Dry matter intake today",
                 fontSize = 11.sp,
@@ -595,67 +492,85 @@ fun CowProfileScreen(
             )
         }
 
-        // Recent activities
+        AppCard {
+            SectionTitle("Milk yield prediction")
+
+            if (prediction != null) {
+                Text(
+                    "Estimated yield: ${prediction.predictedLitres.oneDecimal()} L/day",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = GreenDeep
+                )
+
+                Text(
+                    "Based on latest feeding records.",
+                    fontSize = 11.sp,
+                    color = Muted
+                )
+
+                Text(
+                    "DMI: ${prediction.averageDmiKg.oneDecimal()} kg",
+                    fontSize = 12.sp,
+                    color = Brown
+                )
+
+                Text(
+                    "THI Range: ${prediction.thiRange}",
+                    fontSize = 12.sp,
+                    color = Brown
+                )
+
+                Text(
+                    "Genetic Group: ${prediction.geneticGroup}",
+                    fontSize = 12.sp,
+                    color = Brown
+                )
+
+                if (!prediction.dmiWithinTrainingRange) {
+                    Text(
+                        "Warning: DMI is outside the model's training range.",
+                        fontSize = 11.sp,
+                        color = OrangeText
+                    )
+                }
+            } else {
+                Text(
+                    predictionError,
+                    fontSize = 12.sp,
+                    color = Muted
+                )
+            }
+        }
 
         SectionTitle("Recent activity")
 
         if (recent.isEmpty()) {
-
-            EmptyText(
-                "No records yet for ${cow.name}"
-            )
+            EmptyText("No records yet for ${cow.name}")
         }
 
         recent.forEach { (_, title, subtitle) ->
-
             val isMilk = title.startsWith("Milk")
 
             ListRow(
-                if (isMilk)
-                    Icons.Outlined.WaterDrop
-                else
-                    Icons.Filled.Grass,
-
-                if (isMilk)
-                    YellowSoft
-                else
-                    OrangeSoft,
-
-                if (isMilk)
-                    YellowText
-                else
-                    OrangeText,
-
+                if (isMilk) Icons.Outlined.WaterDrop else Icons.Filled.Grass,
+                if (isMilk) YellowSoft else OrangeSoft,
+                if (isMilk) YellowText else OrangeText,
                 title,
                 subtitle
             )
         }
 
-        Text(
-            "* Demo prediction - AI model not connected yet",
-            fontSize = 10.sp,
-            color = Muted
-        )
-
-        // Navigation buttons
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             AppOutlineButton(
                 "Feeding",
-                {
-                    onNavigate(Routes.feeding(cow.id))
-                },
+                { onNavigate(Routes.feeding(cow.id)) },
                 Modifier.weight(1f)
             )
 
             AppOutlineButton(
                 "Milk",
-                {
-                    onNavigate(Routes.milk(cow.id))
-                },
+                { onNavigate(Routes.milk(cow.id)) },
                 Modifier.weight(1f)
             )
 
@@ -672,62 +587,34 @@ fun CowProfileScreen(
         }
     }
 
-    // Delete confirmation dialog
-
     if (confirmDelete) {
-
         AlertDialog(
-
-            onDismissRequest = {
-                confirmDelete = false
-            },
-
-            title = {
-                Text("Delete ${cow.name}?")
-            },
-
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Delete ${cow.name}?") },
             text = {
                 Text(
                     "The cow will be removed. Her past feeding and milk records stay saved."
                 )
             },
-
             confirmButton = {
-
                 TextButton(
                     onClick = {
-
                         confirmDelete = false
 
                         vm.deleteCow(cow.id) { error ->
-
                             if (error == null) {
-
                                 onBack()
-
                             } else {
-
                                 context.toast(error)
                             }
                         }
                     }
                 ) {
-
-                    Text(
-                        "Delete",
-                        color = OrangeText
-                    )
+                    Text("Delete", color = OrangeText)
                 }
             },
-
             dismissButton = {
-
-                TextButton(
-                    onClick = {
-                        confirmDelete = false
-                    }
-                ) {
-
+                TextButton(onClick = { confirmDelete = false }) {
                     Text("Cancel")
                 }
             }

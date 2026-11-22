@@ -1,0 +1,30 @@
+{
+    "model_name": "Ridge Regression",
+    "features": [
+        "DMI (kg)",
+        "THI Range_T0",
+        "THI Range_T1",
+        "THI Range_T2",
+        "Genetic Group_HF50",
+        "Genetic Group_HF62.5",
+        "Genetic Group_HF75",
+        "Genetic Group_HF87.5",
+        "Genetic Group_Local"
+    ],
+    "dmi_mean": 9.836999999999998,
+    "dmi_scale": 2.5811498083864355,
+    "intercept": 5.541589305513063,
+    "coefficients": [
+        -0.13564198585479711,
+        0.48743426778443133,
+        0.05545802621719647,
+        -0.5428922939915901,
+        -0.48269907365008663,
+        0.09577629845160471,
+        1.1405758598222249,
+        3.611527965656049,
+        -4.36518105033892
+    ],
+    "dmi_min": 4.48,
+    "dmi_max": 14.82
+}

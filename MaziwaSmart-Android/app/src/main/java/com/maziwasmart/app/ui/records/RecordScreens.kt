@@ -121,6 +121,7 @@ private fun CowAndDateRow(
 // DMI = fresh weight × dry matter percentage / 100
 // -----------------------------------------------------------------------------
 
+
 @Composable
 fun FeedingScreen(
     vm: FarmViewModel,
@@ -145,6 +146,10 @@ fun FeedingScreen(
     var supplement by rememberSaveable { mutableStateOf("None") }
     var supplementGrams by rememberSaveable { mutableStateOf("") }
     var timesPerDay by rememberSaveable { mutableStateOf("3") }
+
+    // THI range required by the Ridge Regression model
+    var thiRange by rememberSaveable { mutableStateOf("") }
+
     var saving by remember { mutableStateOf(false) }
 
     LaunchedEffect(cows) {
@@ -153,8 +158,20 @@ fun FeedingScreen(
         }
     }
 
-    val feed = Feeds.types.firstOrNull { it.shortName == feedName }
-        ?: Feeds.types.first()
+    // Reuse the existing day's THI selection when recording another session.
+    LaunchedEffect(cowId, date, feedings) {
+        val existingRanges = feedings
+            .filter { it.cowId == cowId && it.date == date }
+            .map { it.thiRange }
+            .filter { it.isNotBlank() }
+            .distinct()
+
+        thiRange = existingRanges.singleOrNull() ?: ""
+    }
+
+    val feed = Feeds.types.firstOrNull {
+        it.shortName == feedName
+    } ?: Feeds.types.first()
 
     val fresh = freshWeight.toDoubleOrNull() ?: 0.0
     val dm = dmPercent.toDoubleOrNull() ?: 0.0
@@ -194,6 +211,24 @@ fun FeedingScreen(
         ) {
             session = it
         }
+
+        // THI RANGE INPUT
+        FieldLabel("THI Range")
+
+        DropdownField(
+            "Select THI Range",
+            listOf("T0", "T1", "T2"),
+            thiRange.ifBlank { "Select THI Range" },
+            { index ->
+                thiRange = listOf("T0", "T1", "T2")[index]
+            }
+        )
+
+        Text(
+            "Select the recorded environmental THI category for this date.",
+            fontSize = 11.sp,
+            color = Muted
+        )
 
         FieldLabel("Feed type")
 
@@ -259,7 +294,9 @@ fun FeedingScreen(
                 "Supplement",
                 Feeds.supplements,
                 supplement,
-                { index -> supplement = Feeds.supplements[index] },
+                { index ->
+                    supplement = Feeds.supplements[index]
+                },
                 Modifier.weight(1f)
             )
 
@@ -286,14 +323,24 @@ fun FeedingScreen(
             loading = saving,
             onClick = {
                 when {
-                    cow == null -> context.toast("Select a cow")
-                    fresh <= 0 -> context.toast("Enter the fresh weight in kg")
+                    cow == null ->
+                        context.toast("Select a cow")
+
+                    thiRange !in listOf("T0", "T1", "T2") ->
+                        context.toast("Select the THI Range")
+
+                    fresh <= 0 ->
+                        context.toast("Enter the fresh weight in kg")
+
                     dm <= 0 || dm > 100 ->
                         context.toast("Dry matter must be between 1 and 100%")
+
                     (supplementGrams.toDoubleOrNull() ?: 0.0) < 0 ->
                         context.toast("Supplement amount cannot be negative")
+
                     (timesPerDay.toIntOrNull() ?: 0) <= 0 ->
                         context.toast("Enter a valid number of feeding times")
+
                     else -> {
                         saving = true
 
@@ -308,14 +355,17 @@ fun FeedingScreen(
                             dmiKg = dmi,
                             supplement = supplement,
                             supplementGrams = supplementGrams.toDoubleOrNull() ?: 0.0,
-                            timesPerDay = timesPerDay.toIntOrNull() ?: 1
+                            timesPerDay = timesPerDay.toIntOrNull() ?: 1,
+                            thiRange = thiRange
                         )
 
                         vm.addFeeding(record) { error ->
                             saving = false
 
                             if (error == null) {
-                                context.toast("Saved · ${dmi.oneDecimal()} kg DMI")
+                                context.toast(
+                                    "Saved · ${dmi.oneDecimal()} kg DMI · $thiRange"
+                                )
                                 freshWeight = ""
                                 onSaved(cow.id)
                             } else {
@@ -342,7 +392,7 @@ fun FeedingScreen(
                 GreenSoft,
                 GreenDeep,
                 "${f.feedType} ${f.freshWeightKg.clean()} kg → ${f.dmiKg.oneDecimal()} kg DM",
-                "${f.session} · ${f.dryMatterPercent.clean()}% DM" +
+                "${f.session} · ${f.dryMatterPercent.clean()}% DM · THI ${f.thiRange}" +
                         if (f.supplement != "None") " · ${f.supplement}" else ""
             ) {
                 IconButton(
@@ -362,6 +412,7 @@ fun FeedingScreen(
         }
     }
 }
+
 
 // -----------------------------------------------------------------------------
 // MILK RECORDS

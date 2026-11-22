@@ -33,3 +33,15 @@ object Breeds {
 object ExpenseCategories {
     val all = listOf("Feed", "Supplements", "Veterinary", "Labour", "Transport", "Other")
 }
+
+object ModelFeatures {
+    val thiRanges = listOf("T0", "T1", "T2")
+
+    val geneticGroups = listOf(
+        "Local",
+        "HF50",
+        "HF62.5",
+        "HF75",
+        "HF87.5"
+    )
+}
