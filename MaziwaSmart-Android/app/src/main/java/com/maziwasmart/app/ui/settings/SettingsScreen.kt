@@ -2,6 +2,7 @@
 package com.maziwasmart.app.ui.settings
 
 import android.app.Activity
+import com.maziwasmart.app.ui.components.toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -79,6 +80,7 @@ fun SettingsScreen(
     var saving by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var messageIsError by remember { mutableStateOf(false) }
+    var testDataBusy by remember { mutableStateOf(false) }
 
     var feedUnit by remember { mutableStateOf("kg") }
     var missingRecordReminders by remember { mutableStateOf(true) }
@@ -394,6 +396,64 @@ fun SettingsScreen(
                                 milkingReminders = it
                             }
                         )
+                    }
+                }
+            }
+
+            // ---- Test data (Crystal): loads a test farm to check Reports & Advice ----
+            item {
+                SectionHeading("TEST DATA")
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Adds two test cows: Baraka (complete records) and " +
+                                "Neema (incomplete records) with 14 days of data. " +
+                                "Use a test account only.",
+                            color = muted,
+                            fontSize = 12.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Button(
+                                onClick = {
+                                    testDataBusy = true
+                                    vm.loadTestFarm { error ->
+                                        testDataBusy = false
+                                        context.toast(error ?: "Test farm loaded")
+                                    }
+                                },
+                                enabled = !testDataBusy,
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = green
+                                )
+                            ) {
+                                Text("Load test farm")
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    testDataBusy = true
+                                    vm.removeTestFarm { error ->
+                                        testDataBusy = false
+                                        context.toast(error ?: "Test farm removed")
+                                    }
+                                },
+                                enabled = !testDataBusy,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Remove", color = orange)
+                            }
+                        }
                     }
                 }
             }

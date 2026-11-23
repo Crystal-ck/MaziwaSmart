@@ -254,13 +254,14 @@ fun MaziwaApp() {
 
             composable(Routes.INSIGHTS) {
                 InsightsScreen(
+                    farmVm,
                     onBack = back,
                     onNavigate = go
                 )
             }
 
             composable(Routes.RECOMMENDATIONS) {
-                RecommendationsScreen(onNavigate = go)
+                RecommendationsScreen(farmVm, onNavigate = go)
             }
 
             composable(Routes.FINANCE) {

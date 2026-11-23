@@ -11,6 +11,7 @@ import com.maziwasmart.app.data.FarmRepository
 import com.maziwasmart.app.data.FeedingRecord
 import com.maziwasmart.app.data.MilkRecord
 import com.maziwasmart.app.data.MilkSale
+import com.maziwasmart.app.data.TestFarmSeeder
 import com.maziwasmart.app.data.UserProfile
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -67,6 +68,10 @@ class FarmViewModel : ViewModel() {
 
     val sales: StateFlow<List<MilkSale>> =
         load { repo.sales(it) }
+
+    /** Ids of advice cards marked "Reviewed" (saved in Firestore). */
+    val reviewedAdvice: StateFlow<List<String>> =
+        load { repo.reviewedAdvice(it) }
 
     val profile: StateFlow<UserProfile?> =
         userId.flatMapLatest { uid ->
@@ -182,6 +187,28 @@ class FarmViewModel : ViewModel() {
     fun deleteSale(id: String, onDone: (String?) -> Unit) =
         save(onDone) {
             repo.delete(it, "sales", id)
+        }
+
+    fun markAdviceReviewed(adviceId: String, onDone: (String?) -> Unit) =
+        save(onDone) {
+            repo.markAdviceReviewed(it, adviceId)
+        }
+
+    fun undoAdviceReviewed(adviceId: String, onDone: (String?) -> Unit) =
+        save(onDone) {
+            repo.delete(it, "reviewedAdvice", adviceId)
+        }
+
+    // ---- Test data (for testing Reports and Advice) ----
+
+    fun loadTestFarm(onDone: (String?) -> Unit) =
+        save(onDone) {
+            TestFarmSeeder.seed(it)
+        }
+
+    fun removeTestFarm(onDone: (String?) -> Unit) =
+        save(onDone) {
+            TestFarmSeeder.clear(it)
         }
 
     fun updateProfile(
