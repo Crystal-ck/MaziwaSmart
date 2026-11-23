@@ -69,6 +69,7 @@ users/{userId}/feedings/{id}   cowId, date, session, feedType, freshWeightKg,
 users/{userId}/milk/{id}       cowId, date, session (Morning/Evening), litres
 users/{userId}/expenses/{id}   category, description, amount, date
 users/{userId}/sales/{id}      litres, pricePerLitre, date
+users/{userId}/reviewedAdvice/{adviceId}   reviewedAt  (advice cards marked "Reviewed")
 ```
 Dates are saved as text like `2026-11-06`.
 
@@ -106,6 +107,19 @@ then change one line in `DummyAi.kt`:
 val predictor: MilkYieldPredictor = DummyPredictor()   // change to your real class
 ```
 The screens don't need to change.
+
+## 5b. Reports & Advice (real data)
+
+`ai/FarmAnalysis.kt` builds everything from the farmer's Firestore records:
+- **Advice tab** – data-quality, production and feeding recommendations per cow.
+  "Reviewed" is saved in `reviewedAdvice`, so it stays after closing the app.
+- **Reports** – record completeness per cow, prediction accuracy (model vs actual litres),
+  and **Share report (CSV)** through the Android share sheet.
+- **Feeding Insights** – DMI vs milk chart and supplement comparison from real records.
+
+**Test farm:** Profile → *Test data* → **Load test farm** adds Baraka (complete records)
+and Neema (incomplete records) with 14 days of data. **Remove** deletes only that test data.
+Use a separate test account.
 
 ## 6. Where things are in the code
 
